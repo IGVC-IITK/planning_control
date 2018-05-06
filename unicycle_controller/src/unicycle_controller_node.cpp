@@ -40,48 +40,48 @@ class UnicycleControl{
 			// 	path.poses[9*i+0].header = path.header;
 			// 	path.poses[9*i+0].pose.position.x = 0.0;
 			// 	path.poses[9*i+0].pose.position.y = 0.0;
-			// 	path.poses[9*i+0].pose.orientation.z = 0.0; // sin(yaw/2)
-			// 	path.poses[9*i+0].pose.orientation.w = 1.0; // cos(yaw/2)
+			// 	path.poses[9*i+0].pose.orientation.z = 0.0; // std::sin(yaw/2)
+			// 	path.poses[9*i+0].pose.orientation.w = 1.0; // std::cos(yaw/2)
 			// 	path.poses[9*i+1].header = path.header;
 			// 	path.poses[9*i+1].pose.position.x = 1.0;
 			// 	path.poses[9*i+1].pose.position.y = 0.0;
-			// 	path.poses[9*i+1].pose.orientation.z = sin(0*M_PI/360);
-			// 	path.poses[9*i+1].pose.orientation.w = cos(0*M_PI/360);
+			// 	path.poses[9*i+1].pose.orientation.z = std::sin(0*M_PI/360);
+			// 	path.poses[9*i+1].pose.orientation.w = std::cos(0*M_PI/360);
 			// 	path.poses[9*i+2].header = path.header;
 			// 	path.poses[9*i+2].pose.position.x = 2.0;
 			// 	path.poses[9*i+2].pose.position.y = -1.0;
-			// 	path.poses[9*i+2].pose.orientation.z = sin(-90*M_PI/360);
-			// 	path.poses[9*i+2].pose.orientation.w = cos(-90*M_PI/360);
+			// 	path.poses[9*i+2].pose.orientation.z = std::sin(-90*M_PI/360);
+			// 	path.poses[9*i+2].pose.orientation.w = std::cos(-90*M_PI/360);
 			// 	path.poses[9*i+3].header = path.header;
 			// 	path.poses[9*i+3].pose.position.x = 2.0;
 			// 	path.poses[9*i+3].pose.position.y = -2.0;
-			// 	path.poses[9*i+3].pose.orientation.z = sin(-90*M_PI/360);
-			// 	path.poses[9*i+3].pose.orientation.w = cos(-90*M_PI/360);
+			// 	path.poses[9*i+3].pose.orientation.z = std::sin(-90*M_PI/360);
+			// 	path.poses[9*i+3].pose.orientation.w = std::cos(-90*M_PI/360);
 			// 	path.poses[9*i+4].header = path.header;
 			// 	path.poses[9*i+4].pose.position.x = 1.0;
 			// 	path.poses[9*i+4].pose.position.y = -3.0;
-			// 	path.poses[9*i+4].pose.orientation.z = sin(-180*M_PI/360);
-			// 	path.poses[9*i+4].pose.orientation.w = cos(-180*M_PI/360);
+			// 	path.poses[9*i+4].pose.orientation.z = std::sin(-180*M_PI/360);
+			// 	path.poses[9*i+4].pose.orientation.w = std::cos(-180*M_PI/360);
 			// 	path.poses[9*i+5].header = path.header;
 			// 	path.poses[9*i+5].pose.position.x = 0.0;
 			// 	path.poses[9*i+5].pose.position.y = -3.0;
-			// 	path.poses[9*i+5].pose.orientation.z = sin(-180*M_PI/360);
-			// 	path.poses[9*i+5].pose.orientation.w = cos(-180*M_PI/360);
+			// 	path.poses[9*i+5].pose.orientation.z = std::sin(-180*M_PI/360);
+			// 	path.poses[9*i+5].pose.orientation.w = std::cos(-180*M_PI/360);
 			// 	path.poses[9*i+6].header = path.header;
 			// 	path.poses[9*i+6].pose.position.x = -1.0;
 			// 	path.poses[9*i+6].pose.position.y = -2.0;
-			// 	path.poses[9*i+6].pose.orientation.z = sin(-270*M_PI/360);
-			// 	path.poses[9*i+6].pose.orientation.w = cos(-270*M_PI/360);
+			// 	path.poses[9*i+6].pose.orientation.z = std::sin(-270*M_PI/360);
+			// 	path.poses[9*i+6].pose.orientation.w = std::cos(-270*M_PI/360);
 			// 	path.poses[9*i+7].header = path.header;
 			// 	path.poses[9*i+7].pose.position.x = -1.0;
 			// 	path.poses[9*i+7].pose.position.y = -1.0;
-			// 	path.poses[9*i+7].pose.orientation.z = sin(-270*M_PI/360);
-			// 	path.poses[9*i+7].pose.orientation.w = cos(-270*M_PI/360);
+			// 	path.poses[9*i+7].pose.orientation.z = std::sin(-270*M_PI/360);
+			// 	path.poses[9*i+7].pose.orientation.w = std::cos(-270*M_PI/360);
 			// 	path.poses[9*i+8].header = path.header;
 			// 	path.poses[9*i+8].pose.position.x = 0.0;
 			// 	path.poses[9*i+8].pose.position.y = 0.0;
-			// 	path.poses[9*i+8].pose.orientation.z = sin(0*M_PI/360);
-			// 	path.poses[9*i+8].pose.orientation.w = cos(0*M_PI/360);
+			// 	path.poses[9*i+8].pose.orientation.z = std::sin(0*M_PI/360);
+			// 	path.poses[9*i+8].pose.orientation.w = std::cos(0*M_PI/360);
 			// }
 			// path.poses[9*num_loops+1].header = path.header;
 			// path.poses[9*num_loops+1].pose.position.x = 0.0;
@@ -122,7 +122,7 @@ class UnicycleControl{
 
 			v_x = odom->twist.twist.linear.x;
 			v_y = odom->twist.twist.linear.y; 		// typically, this should be zero
-			v 	= sqrt(v_x*v_x + v_y*v_y);
+			v 	= std::sqrt(v_x*v_x + v_y*v_y);
 
 			switchPathPiece();			
 			generateControl();
@@ -202,7 +202,7 @@ class UnicycleControl{
 			if (path_iterator == 0 || 
 				(path_type == 'l' && distance(x_prev, y_prev, x, y) > length_path) ||
 				(path_type == 'a' && distance(x_prev, y_prev, x, y) > length_path) ||
-				(path_type == 'p' && abs(angWrap(yaw-yaw_d)) < YAW_TOLERANCE)){
+				(path_type == 'p' && std::abs(angWrap(yaw-yaw_d)) < YAW_TOLERANCE)){
 				path_iterator++;
 				if (path_iterator < path.poses.size()){
 					// Getting initial and final poses for the path-piece
@@ -228,7 +228,7 @@ class UnicycleControl{
 
 					// Identifying path_type and setting up necessary parameters
 					if (distance(x_prev, y_prev, x_next, y_next) > DIST_THRESH){
-						if (abs(angWrap(yaw_next-yaw_prev)) > ANGLE_THRESH){
+						if (std::abs(angWrap(yaw_next-yaw_prev)) > ANGLE_THRESH){
 							path_type = 'a';	// finite arc with non-zero radius
 							ROS_INFO_STREAM("Mode: Arc");
 							//////////////////////////////////////////////////////
@@ -240,14 +240,14 @@ class UnicycleControl{
 							// yaw_path corresponds to the bisector of the smaller
 							// angle between the two yaws
 							yaw_path 	= (yaw_prev + yaw_next)/2.0;
-							if (abs(angWrap(yaw_path-yaw_prev)) > M_PI)
+							if (std::abs(angWrap(yaw_path-yaw_prev)) > M_PI)
 								yaw_path = angWrap(yaw_path - M_PI);
 							speed_path 	= SPEED_SETPOINT;
 							// curvature_path is positive for anti-clockwise turns
 							curvature_path = 
-								2.0*sin(angWrap(yaw_next-yaw_prev)/2.0)/(length_path);
-							cx_path = x_prev - sin(yaw_prev)/curvature_path;
-							cy_path = y_prev + cos(yaw_prev)/curvature_path;
+								2.0*std::sin(angWrap(yaw_next-yaw_prev)/2.0)/(length_path);
+							cx_path = x_prev - std::sin(yaw_prev)/curvature_path;
+							cy_path = y_prev + std::cos(yaw_prev)/curvature_path;
 						}
 						else{
 							path_type 	= 'l';	// line segment
@@ -303,7 +303,7 @@ class UnicycleControl{
 					sgn(curvature_path)*distance(cx_path, cy_path, x, y);
 				speed_d 	= speed_path;
 				omega_d 	= - ka*v*l_error*sinc(yaw_error) - kb*v*yaw_error + 
-					(v*cos(yaw_error))/(1/curvature_path-l_error);
+					(v*std::cos(yaw_error))/(1/curvature_path-l_error);
 			}
 			else if (path_type == 'l')
 			{
@@ -346,11 +346,11 @@ class UnicycleControl{
 		}
 
 		inline double distance(double x1, double y1, double x2, double y2){
-			return sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
+			return std::sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
 		}
 
 		inline double sinc(double x){
-			return (abs(x)>0.001)?(sin(x)/x):1.0;
+			return (std::abs(x)>0.001)?(std::sin(x)/x):1.0;
 		}
 
 		inline int sgn(double x) {
