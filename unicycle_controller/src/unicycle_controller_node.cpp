@@ -12,9 +12,9 @@
 #define ANGLE_THRESH 	0.01
 
 // Gains (to be tuned)
-#define ka 				2.0		// responsiveness to distance from path 
-#define kb 				1.0		// responsiveness to angular deviation
-#define kb_point 		0.5 	// proportional gain for on-point-rotation
+#define ka 				4.0		// responsiveness to distance from path 
+#define kb 				3.0		// responsiveness to angular deviation
+#define kb_point 		1.0 	// proportional gain for on-point-rotation
 
 #define SPEED_SETPOINT 	0.5		// constant speed controller
 	
