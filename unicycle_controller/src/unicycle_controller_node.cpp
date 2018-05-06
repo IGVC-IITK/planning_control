@@ -18,7 +18,8 @@
 
 #define SPEED_SETPOINT 	0.5		// constant speed controller
 	
-#define YAW_TOLERANCE 	0.052	// ~3 degrees
+#define YAW_TOLERANCE 	0.05	// completion check for on-point-rotation
+#define TURN_RATE_MIN	0.5		// minimum turn rate for on-point-rotation
 
 #define frequency 		20.0	// controller frequency (keep close to odometry rate)
 
@@ -200,9 +201,15 @@ class UnicycleControl{
 		// (some parameters are set to safe values even if not required by control)
 		void switchPathPiece(){
 			if (path_iterator == 0 || 
-				(path_type == 'l' && distance(x_prev, y_prev, x, y) > length_path) ||
-				(path_type == 'a' && distance(x_prev, y_prev, x, y) > length_path) ||
-				(path_type == 'p' && std::abs(angWrap(yaw-yaw_d)) < YAW_TOLERANCE)){
+				(path_type == 'l' &&
+					((x-x_prev)*(x_next-x_prev)+(y-y_prev)*(y_next-y_prev))/
+					length_path > length_path) ||
+				(path_type == 'a' &&
+					((x-x_prev)*(x_next-x_prev)+(y-y_prev)*(y_next-y_prev))/
+					length_path > length_path) ||
+				(path_type == 'p' &&
+					std::abs(angWrap(yaw-yaw_prev)) >
+					std::abs(angWrap(yaw_next-yaw_prev)) - YAW_TOLERANCE)){
 				path_iterator++;
 				if (path_iterator < path.poses.size()){
 					// Getting initial and final poses for the path-piece
@@ -324,7 +331,7 @@ class UnicycleControl{
 				yaw_error 	= angWrap(yaw-yaw_d);
 				l_error 	= distance(x, y, x_next, y_next);
 				speed_d 	= speed_path;
-				omega_d 	= -kb_point*yaw_error;
+				omega_d 	= -std::max(kb_point*yaw_error, TURN_RATE_MIN*sgn(yaw_error));
 			}
 			else // path_type == 'e'
 			{
