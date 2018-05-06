@@ -1,9 +1,11 @@
 #include <ros/ros.h>
-#include <tf/tf.h>
 
+#include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
+#include <tf/tf.h>
+#include <tf/transform_listener.h>
 
 // Only for determining path type
 #define DIST_THRESH 	0.01
@@ -23,81 +25,95 @@
 class UnicycleControl{
 	public:
 		UnicycleControl(){
-			pub_ = nh_.advertise<geometry_msgs::Twist>("ros0xrobot/cmd_vel", 1);
-			sub_ = nh_.subscribe("odom", 1, 
-				&UnicycleControl::odomCallback, this);
+			pub_cmd = nh_.advertise<geometry_msgs::Twist>("cmd_vel", 1);
+			sub_odom = nh_.subscribe("odom", 1, &UnicycleControl::odomCallback, this);
+			sub_path = nh_.subscribe("path", 1, &UnicycleControl::pathCallback, this);
 
-			// Setting up a fixed, rounded square path here for testing purpose
-			path.header.stamp = ros::Time::now();
-			path.header.frame_id = "odom";
-			int num_loops = 3;
-			path.poses.resize(9*num_loops+1);
-			for (int i=0; i<num_loops; i++)
-			{
-				path.poses[9*i+0].header = path.header;
-				path.poses[9*i+0].pose.position.x = 0.0;
-				path.poses[9*i+0].pose.position.y = 0.0;
-				path.poses[9*i+0].pose.orientation.z = 0.0; // sin(yaw/2)
-				path.poses[9*i+0].pose.orientation.w = 1.0; // cos(yaw/2)
-				path.poses[9*i+1].header = path.header;
-				path.poses[9*i+1].pose.position.x = 1.0;
-				path.poses[9*i+1].pose.position.y = 0.0;
-				path.poses[9*i+1].pose.orientation.z = sin(0*M_PI/360);
-				path.poses[9*i+1].pose.orientation.w = cos(0*M_PI/360);
-				path.poses[9*i+2].header = path.header;
-				path.poses[9*i+2].pose.position.x = 2.0;
-				path.poses[9*i+2].pose.position.y = -1.0;
-				path.poses[9*i+2].pose.orientation.z = sin(-90*M_PI/360);
-				path.poses[9*i+2].pose.orientation.w = cos(-90*M_PI/360);
-				path.poses[9*i+3].header = path.header;
-				path.poses[9*i+3].pose.position.x = 2.0;
-				path.poses[9*i+3].pose.position.y = -2.0;
-				path.poses[9*i+3].pose.orientation.z = sin(-90*M_PI/360);
-				path.poses[9*i+3].pose.orientation.w = cos(-90*M_PI/360);
-				path.poses[9*i+4].header = path.header;
-				path.poses[9*i+4].pose.position.x = 1.0;
-				path.poses[9*i+4].pose.position.y = -3.0;
-				path.poses[9*i+4].pose.orientation.z = sin(-180*M_PI/360);
-				path.poses[9*i+4].pose.orientation.w = cos(-180*M_PI/360);
-				path.poses[9*i+5].header = path.header;
-				path.poses[9*i+5].pose.position.x = 0.0;
-				path.poses[9*i+5].pose.position.y = -3.0;
-				path.poses[9*i+5].pose.orientation.z = sin(-180*M_PI/360);
-				path.poses[9*i+5].pose.orientation.w = cos(-180*M_PI/360);
-				path.poses[9*i+6].header = path.header;
-				path.poses[9*i+6].pose.position.x = -1.0;
-				path.poses[9*i+6].pose.position.y = -2.0;
-				path.poses[9*i+6].pose.orientation.z = sin(-270*M_PI/360);
-				path.poses[9*i+6].pose.orientation.w = cos(-270*M_PI/360);
-				path.poses[9*i+7].header = path.header;
-				path.poses[9*i+7].pose.position.x = -1.0;
-				path.poses[9*i+7].pose.position.y = -1.0;
-				path.poses[9*i+7].pose.orientation.z = sin(-270*M_PI/360);
-				path.poses[9*i+7].pose.orientation.w = cos(-270*M_PI/360);
-				path.poses[9*i+8].header = path.header;
-				path.poses[9*i+8].pose.position.x = 0.0;
-				path.poses[9*i+8].pose.position.y = 0.0;
-				path.poses[9*i+8].pose.orientation.z = sin(0*M_PI/360);
-				path.poses[9*i+8].pose.orientation.w = cos(0*M_PI/360);
-			}
-			path.poses[9*num_loops+1].header = path.header;
-			path.poses[9*num_loops+1].pose.position.x = 0.0;
-			path.poses[9*num_loops+1].pose.position.y = 0.0;
-			path.poses[9*num_loops+1].pose.orientation.z = 0.0;
-			path.poses[9*num_loops+1].pose.orientation.w = 1.0;
+			// Uncomment this fixed path if you are not publishing anything to "path"
+			// path.header.stamp = ros::Time::now();
+			// path.header.frame_id = "odom";
+			// int num_loops = 3;
+			// path.poses.resize(9*num_loops+1);
+			// for (int i=0; i<num_loops; i++)
+			// {
+			// 	path.poses[9*i+0].header = path.header;
+			// 	path.poses[9*i+0].pose.position.x = 0.0;
+			// 	path.poses[9*i+0].pose.position.y = 0.0;
+			// 	path.poses[9*i+0].pose.orientation.z = 0.0; // sin(yaw/2)
+			// 	path.poses[9*i+0].pose.orientation.w = 1.0; // cos(yaw/2)
+			// 	path.poses[9*i+1].header = path.header;
+			// 	path.poses[9*i+1].pose.position.x = 1.0;
+			// 	path.poses[9*i+1].pose.position.y = 0.0;
+			// 	path.poses[9*i+1].pose.orientation.z = sin(0*M_PI/360);
+			// 	path.poses[9*i+1].pose.orientation.w = cos(0*M_PI/360);
+			// 	path.poses[9*i+2].header = path.header;
+			// 	path.poses[9*i+2].pose.position.x = 2.0;
+			// 	path.poses[9*i+2].pose.position.y = -1.0;
+			// 	path.poses[9*i+2].pose.orientation.z = sin(-90*M_PI/360);
+			// 	path.poses[9*i+2].pose.orientation.w = cos(-90*M_PI/360);
+			// 	path.poses[9*i+3].header = path.header;
+			// 	path.poses[9*i+3].pose.position.x = 2.0;
+			// 	path.poses[9*i+3].pose.position.y = -2.0;
+			// 	path.poses[9*i+3].pose.orientation.z = sin(-90*M_PI/360);
+			// 	path.poses[9*i+3].pose.orientation.w = cos(-90*M_PI/360);
+			// 	path.poses[9*i+4].header = path.header;
+			// 	path.poses[9*i+4].pose.position.x = 1.0;
+			// 	path.poses[9*i+4].pose.position.y = -3.0;
+			// 	path.poses[9*i+4].pose.orientation.z = sin(-180*M_PI/360);
+			// 	path.poses[9*i+4].pose.orientation.w = cos(-180*M_PI/360);
+			// 	path.poses[9*i+5].header = path.header;
+			// 	path.poses[9*i+5].pose.position.x = 0.0;
+			// 	path.poses[9*i+5].pose.position.y = -3.0;
+			// 	path.poses[9*i+5].pose.orientation.z = sin(-180*M_PI/360);
+			// 	path.poses[9*i+5].pose.orientation.w = cos(-180*M_PI/360);
+			// 	path.poses[9*i+6].header = path.header;
+			// 	path.poses[9*i+6].pose.position.x = -1.0;
+			// 	path.poses[9*i+6].pose.position.y = -2.0;
+			// 	path.poses[9*i+6].pose.orientation.z = sin(-270*M_PI/360);
+			// 	path.poses[9*i+6].pose.orientation.w = cos(-270*M_PI/360);
+			// 	path.poses[9*i+7].header = path.header;
+			// 	path.poses[9*i+7].pose.position.x = -1.0;
+			// 	path.poses[9*i+7].pose.position.y = -1.0;
+			// 	path.poses[9*i+7].pose.orientation.z = sin(-270*M_PI/360);
+			// 	path.poses[9*i+7].pose.orientation.w = cos(-270*M_PI/360);
+			// 	path.poses[9*i+8].header = path.header;
+			// 	path.poses[9*i+8].pose.position.x = 0.0;
+			// 	path.poses[9*i+8].pose.position.y = 0.0;
+			// 	path.poses[9*i+8].pose.orientation.z = sin(0*M_PI/360);
+			// 	path.poses[9*i+8].pose.orientation.w = cos(0*M_PI/360);
+			// }
+			// path.poses[9*num_loops+1].header = path.header;
+			// path.poses[9*num_loops+1].pose.position.x = 0.0;
+			// path.poses[9*num_loops+1].pose.position.y = 0.0;
+			// path.poses[9*num_loops+1].pose.orientation.z = 0.0;
+			// path.poses[9*num_loops+1].pose.orientation.w = 1.0;
 		}
 
 		// Reads current state, calls other functions and publishes control
 		void odomCallback(const nav_msgs::OdometryConstPtr& odom){
-			// Getting current state
-			x = odom->pose.pose.position.x;
-			y = odom->pose.pose.position.y;
+			// Getting current state in odom frame
+			if (odom->header.frame_id != "odom")
+			{
+				ROS_WARN_STREAM_ONCE("Messages on the odometry topic are not in the odom frame. "
+					<<"Attempting to transform them to the odom frame.");
+				other_frame_pose.header = odom->header;
+				other_frame_pose.pose = odom->pose.pose;
+				listener.transformPose("odom", other_frame_pose, odom_pose);
+			}
+			else
+			{
+				odom_pose.header = odom->header;
+				odom_pose.pose = odom->pose.pose;
+			}
+
+			x = odom_pose.pose.position.x;
+			y = odom_pose.pose.position.y;
 
 			q_temp = tf::Quaternion(
-				odom->pose.pose.orientation.x,
-				odom->pose.pose.orientation.y,
-				odom->pose.pose.orientation.z,
-				odom->pose.pose.orientation.w);
+				odom_pose.pose.orientation.x,
+				odom_pose.pose.orientation.y,
+				odom_pose.pose.orientation.z,
+				odom_pose.pose.orientation.w);
 			m_temp = tf::Matrix3x3(q_temp);
 			m_temp.getRPY(roll, pitch, yaw);
 
@@ -111,18 +127,49 @@ class UnicycleControl{
 			// Publishing twist
 			twist_output.linear.x 	= speed_d;
 			twist_output.angular.z 	= omega_d;
-			pub_.publish(twist_output);
+			pub_cmd.publish(twist_output);
 
-			ROS_INFO_STREAM_THROTTLE(1.0, "Errors - yaw: " <<yaw_error<<" l: "<<l_error);
-			ROS_INFO_STREAM_THROTTLE(1.0, "Control - speed: "<<speed_d<<" omega: "<<omega_d);
+			ROS_DEBUG_STREAM_THROTTLE(1.0, "Errors - yaw: " <<yaw_error<<" l: "<<l_error);
+			ROS_DEBUG_STREAM_THROTTLE(1.0, "Control - speed: "<<speed_d<<" omega: "<<omega_d);
+		}
+
+		void pathCallback(const nav_msgs::PathConstPtr& path_msg){
+			///////////////////////////////////////////////////////////////////////////
+			// ASSUMING THAT THE PATH MESSAGE IS IN THE FORMAT REQUIRED BY THIS NODE //
+			// (It should be traversable using only lines, arcs and on-point turns.) //
+			///////////////////////////////////////////////////////////////////////////
+
+			// Getting path in odom frame
+			path.poses.resize(path_msg->poses.size());
+			if (path_msg->header.frame_id != "odom")
+			{
+				ROS_WARN_STREAM_ONCE("Messages on the path topic are not in the odom frame. "
+					<<"Attempting to transform them to the odom frame.");
+				path.header.stamp = path_msg->header.stamp;
+				path.header.frame_id = "odom";
+				for (int i=0; i<path.poses.size(); i++)
+					listener.transformPose("odom", path_msg->poses[i], path.poses[i]);
+			}
+			else
+			{
+				path.header = path_msg->header;
+				for (int i=0; i<path.poses.size(); i++)
+					path.poses[i] = path_msg->poses[i];
+			}
+
+			// Starting from beginning of new path
+			path_iterator = 0;
+			ROS_INFO_STREAM("New path received.");
 		}
 
 	private:
 		ros::NodeHandle nh_;
-		ros::Publisher pub_;
-		ros::Subscriber sub_;
+		ros::Publisher pub_cmd;
+		ros::Subscriber sub_odom, sub_path;
+		tf::TransformListener listener;
 
 		// Vars representing current state
+		geometry_msgs::PoseStamped odom_pose, other_frame_pose;
 		double x = 0.0, y = 0.0;
 		double roll = 0.0, pitch = 0.0, yaw = 0.0;	// roll and pitch are dummy vars
 		double v_x = 0.0, v_y = 0.0, v = 0.0;
@@ -308,7 +355,7 @@ class UnicycleControl{
 };
 
 int main(int argc,char* argv[]){
-	ros::init(argc, argv, "unicycle_controller");
+	ros::init(argc, argv, "unicycle_controller_node");
 	UnicycleControl controller;
 	
 	ros::Rate loop_rate(sampling_rate);
