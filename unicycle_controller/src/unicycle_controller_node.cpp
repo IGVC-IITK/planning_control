@@ -12,24 +12,25 @@
 #define ANGLE_THRESH 	0.01
 
 // Gains (to be tuned)
-#define ka 			2.0	// responsiveness to distance from path 
-#define kb 			1.0	// responsiveness to angular deviation
-#define kb_point 	0.5 // proportional gain for on-point-rotation
+#define ka 				2.0		// responsiveness to distance from path 
+#define kb 				1.0		// responsiveness to angular deviation
+#define kb_point 		0.5 	// proportional gain for on-point-rotation
 
-#define SPEED_SETPOINT 	0.5
+#define SPEED_SETPOINT 	0.5		// constant speed controller
+	
+#define YAW_TOLERANCE 	0.052	// ~3 degrees
 
-#define YAW_TOLERANCE 	0.052
-
-#define sampling_rate 	20.0
+#define frequency 		20.0	// controller frequency (keep close to odometry rate)
 
 class UnicycleControl{
 	public:
-		UnicycleControl(){
-			pub_cmd = nh_.advertise<geometry_msgs::Twist>("cmd_vel", 1);
-			sub_odom = nh_.subscribe("odom", 1, &UnicycleControl::odomCallback, this);
-			sub_path = nh_.subscribe("path", 1, &UnicycleControl::pathCallback, this);
+		UnicycleControl(ros::NodeHandle* nodehandle):nh(*nodehandle){
+			pub_cmd = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
+			sub_odom = nh.subscribe("odom", 1, &UnicycleControl::odomCallback, this);
+			sub_path = nh.subscribe("path", 1, &UnicycleControl::pathCallback, this);
 
-			// Uncomment this fixed path if you are not publishing anything to "path"
+			// Uncomment this fixed path if nothing is being published to "path"
+			// pub_path = nh.advertise<nav_msgs::Path>("path/fixed", 1);
 			// path.header.stamp = ros::Time::now();
 			// path.header.frame_id = "odom";
 			// int num_loops = 3;
@@ -87,6 +88,8 @@ class UnicycleControl{
 			// path.poses[9*num_loops+1].pose.position.y = 0.0;
 			// path.poses[9*num_loops+1].pose.orientation.z = 0.0;
 			// path.poses[9*num_loops+1].pose.orientation.w = 1.0;
+			// ros::Duration(1.0).sleep();				// waiting for pub_path to get constructed
+			// pub_path.publish(path);
 		}
 
 		// Reads current state, calls other functions and publishes control
@@ -118,7 +121,7 @@ class UnicycleControl{
 			m_temp.getRPY(roll, pitch, yaw);
 
 			v_x = odom->twist.twist.linear.x;
-			v_y = odom->twist.twist.linear.y; // typically, this should be zero
+			v_y = odom->twist.twist.linear.y; 		// typically, this should be zero
 			v 	= sqrt(v_x*v_x + v_y*v_y);
 
 			switchPathPiece();			
@@ -163,8 +166,9 @@ class UnicycleControl{
 		}
 
 	private:
-		ros::NodeHandle nh_;
+		ros::NodeHandle nh;
 		ros::Publisher pub_cmd;
+		// ros::Publisher pub_path;					// uncomment if nothing is being published to "path"
 		ros::Subscriber sub_odom, sub_path;
 		tf::TransformListener listener;
 
@@ -356,9 +360,10 @@ class UnicycleControl{
 
 int main(int argc,char* argv[]){
 	ros::init(argc, argv, "unicycle_controller_node");
-	UnicycleControl controller;
+	ros::NodeHandle nh;
+	UnicycleControl controller(&nh);
 	
-	ros::Rate loop_rate(sampling_rate);
+	ros::Rate loop_rate(frequency);
 	while(ros::ok())
 	{
 		ros::spinOnce();
