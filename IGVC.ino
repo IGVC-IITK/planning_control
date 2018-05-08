@@ -189,17 +189,17 @@ void channel_to_ros(){
   }
   // Autonomous Mode then blink else constant
   static bool state = LOW;
-  static int prev_millis = 0;
+  static long prev_millis = 0;
   if(!manual_mode){
-    if(prev_millis - millis() > 500){
+    if(millis() - prev_millis > 500){
+      prev_millis = millis();
       state = !state;
       digitalWrite(13, state);
-      prev_millis = millis();
     }
   }
   else{
     prev_millis = millis();
-    digitalWrite(13, state);
+    digitalWrite(13, HIGH);
   }
   
   // Get the values into ROS messages.
