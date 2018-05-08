@@ -12,17 +12,19 @@
 #define ZERO_THRESH 	0.001
 
 // Gains
-#define ka 				4.0		// responsiveness to distance from path 
-#define kb 				3.0		// responsiveness to angular deviation
-#define kb_point 		1.0 	// proportional gain for on-point-rotation
+#define ka 					4.0		// responsiveness to distance from path 
+#define kb 					3.0		// responsiveness to angular deviation
+#define kb_point 			1.0 	// proportional gain for on-point-rotation
 
-#define SPEED_SETPOINT 	0.5		// constant speed controller
+#define SPEED_SETPOINT 		0.5		// constant speed controller
 	
-#define YAW_TOLERANCE 	0.05	// completion check for on-point-rotation
-#define TURN_RATE_MIN	0.5		// minimum turn rate for on-point-rotation
+#define YAW_TOLERANCE 		0.05	// completion check for on-point-rotation
+#define TURN_RATE_MIN		0.5		// minimum turn rate for on-point-rotation
+#define SPEED_BEFORE_POINT	0.1		// should be close to zero but not exactly zero
+#define DECELERATION_RATE	0.65	// measured robot deceleration rate
 
-#define CONTROL_DELAY	0.3		// approx. low-level controller delay
-#define FREQUENCY 		20.0	// controller frequency (keep close to odometry rate)
+#define CONTROL_DELAY		0.3		// approx. low-level controller delay
+#define FREQUENCY 			20.0	// controller frequency (keep close to odometry rate)
 
 class UnicycleControl{
 	public:
@@ -132,6 +134,9 @@ class UnicycleControl{
 			omega 	= odom_msg->twist.twist.angular.z;
 			v 		= std::sqrt(v_x*v_x + v_y*v_y);
 
+			deceleration_distance = std::max(0.0,
+				(v*v - SPEED_BEFORE_POINT*SPEED_BEFORE_POINT)/(2.0*DECELERATION_RATE));
+
 			predictOdom();
 			switchPathPiece();
 			generateControl();
@@ -196,6 +201,8 @@ class UnicycleControl{
 		double length_path = 0.0, yaw_path = 0.0, speed_path = SPEED_SETPOINT;
 		double curvature_path = 0.0, cx_path = 0.0, cy_path = 0.0;	// only for arcs
 		char path_type = 'l';	// line, arc, point or end ('l', 'a', 'p' or 'e')
+		bool upcoming_point = false;
+		double deceleration_distance = 0.0;
 
 		// Vars representing errors and control inputs
 		bool manual_mode = false;
@@ -324,6 +331,18 @@ class UnicycleControl{
 					cy_path = std::numeric_limits<double>::infinity();
 				}
 			}
+
+			// Checking if we need to decelerate at the end of this path-piece
+			if ((path_type == 'l' || path_type == 'a') &&
+				(path_iterator == path.poses.size() - 1 ||
+				distance(x_next, y_next,
+					path.poses[path_iterator+1].pose.position.x,
+					path.poses[path_iterator+1].pose.position.y) < ZERO_THRESH) &&
+				((x-x_prev)*(x_next-x_prev)+(y-y_prev)*(y_next-y_prev))/
+				length_path > length_path - deceleration_distance)
+					upcoming_point = true;
+			else
+					upcoming_point = false;
 		}
 
 		// Generates control input for low level controller based on the path type
@@ -338,7 +357,10 @@ class UnicycleControl{
 				// arc or the 'outside' of negative-curvature arc.
 				l_error		= 1/curvature_path -
 					sgn(curvature_path)*distance(cx_path, cy_path, x, y);
-				speed_d 	= speed_path;
+				if (!upcoming_point)
+					speed_d = speed_path;
+				else
+					speed_d = SPEED_BEFORE_POINT;
 				omega_d 	= - ka*v*l_error*sinc(yaw_error) - kb*v*yaw_error + 
 					(v*std::cos(yaw_error))/(1/curvature_path-l_error);
 			}
@@ -352,7 +374,10 @@ class UnicycleControl{
 				l_error 	= 
 					(x_prev*(y_next-y) + x_next*(y-y_prev) + x*(y_prev-y_next))/
 					(2.0*length_path);	// height = area/base
-				speed_d 	= speed_path;
+				if (!upcoming_point)
+					speed_d = speed_path;
+				else
+					speed_d = SPEED_BEFORE_POINT;
 				omega_d 	= - ka*v*l_error*sinc(yaw_error) - kb*v*yaw_error;
 			}
 			else if (path_type == 'p')
