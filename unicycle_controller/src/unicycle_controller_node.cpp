@@ -4,6 +4,8 @@
 #include <geometry_msgs/Twist.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
+#include <std_msgs/Bool.h>
+
 #include <tf/tf.h>
 #include <tf/transform_listener.h>
 
@@ -26,6 +28,7 @@ class UnicycleControl{
 	public:
 		UnicycleControl(ros::NodeHandle* nodehandle):nh(*nodehandle){
 			pub_cmd = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
+			sub_mode = nh.subscribe("manual_mode", 1, &UnicycleControl::modeCallback, this);
 			sub_odom = nh.subscribe("odom", 1, &UnicycleControl::odomCallback, this);
 			sub_path = nh.subscribe("path", 1, &UnicycleControl::pathCallback, this);
 
@@ -92,21 +95,25 @@ class UnicycleControl{
 			// pub_path.publish(path);
 		}
 
+		void modeCallback(const std_msgs::Bool& mode_msg){
+			manual_mode = mode_msg.data;
+		}
+
 		// Reads current state, calls other functions and publishes control
-		void odomCallback(const nav_msgs::OdometryConstPtr& odom){
+		void odomCallback(const nav_msgs::OdometryConstPtr& odom_msg){
 			// Getting current state in odom frame
-			if (odom->header.frame_id != "odom")
+			if (odom_msg->header.frame_id != "odom")
 			{
 				ROS_WARN_STREAM_ONCE("Messages on the odometry topic are not in the odom frame. "
 					<<"Attempting to transform them to the odom frame.");
-				other_frame_pose.header = odom->header;
-				other_frame_pose.pose = odom->pose.pose;
+				other_frame_pose.header = odom_msg->header;
+				other_frame_pose.pose = odom_msg->pose.pose;
 				listener.transformPose("odom", other_frame_pose, odom_pose);
 			}
 			else
 			{
-				odom_pose.header = odom->header;
-				odom_pose.pose = odom->pose.pose;
+				odom_pose.header = odom_msg->header;
+				odom_pose.pose = odom_msg->pose.pose;
 			}
 
 			x = odom_pose.pose.position.x;
@@ -120,19 +127,20 @@ class UnicycleControl{
 			m_temp = tf::Matrix3x3(q_temp);
 			m_temp.getRPY(roll, pitch, yaw);
 
-			v_x = odom->twist.twist.linear.x;
-			v_y = odom->twist.twist.linear.y; 		// typically, this should be zero
-			omega = odom->twist.twist.angular.z;
-			v 	= std::sqrt(v_x*v_x + v_y*v_y);
+			v_x 	= odom_msg->twist.twist.linear.x;
+			v_y 	= odom_msg->twist.twist.linear.y; 	// typically, this should be zero
+			omega 	= odom_msg->twist.twist.angular.z;
+			v 		= std::sqrt(v_x*v_x + v_y*v_y);
 
 			predictOdom();
 			switchPathPiece();
 			generateControl();
 
-			// Publishing twist
+			// Publishing twist if robot is not being controlled via a remote publishing to cmd_vel
 			twist_output.linear.x 	= speed_d;
 			twist_output.angular.z 	= omega_d;
-			pub_cmd.publish(twist_output);
+			if (!manual_mode)
+				pub_cmd.publish(twist_output);
 
 			ROS_DEBUG_STREAM_THROTTLE(1.0, "Errors - yaw: " <<yaw_error<<" l: "<<l_error);
 			ROS_DEBUG_STREAM_THROTTLE(1.0, "Control - speed: "<<speed_d<<" omega: "<<omega_d);
@@ -171,7 +179,7 @@ class UnicycleControl{
 		ros::NodeHandle nh;
 		ros::Publisher pub_cmd;
 		// ros::Publisher pub_path;					// uncomment if nothing is being published to "path"
-		ros::Subscriber sub_odom, sub_path;
+		ros::Subscriber sub_mode, sub_odom, sub_path;
 		tf::TransformListener listener;
 
 		// Vars representing current state
@@ -190,6 +198,7 @@ class UnicycleControl{
 		char path_type = 'l';	// line, arc, point or end ('l', 'a', 'p' or 'e')
 
 		// Vars representing errors and control inputs
+		bool manual_mode = false;
 		double yaw_d = 0.0, yaw_error = 0.0, l_error = 0.0;
 		double speed_d = SPEED_SETPOINT, omega_d = 0.0;
 		geometry_msgs::Twist twist_output;
