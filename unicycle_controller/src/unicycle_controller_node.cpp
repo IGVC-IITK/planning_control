@@ -7,11 +7,9 @@
 #include <tf/tf.h>
 #include <tf/transform_listener.h>
 
-// Only for determining path type
-#define DIST_THRESH 	0.01
-#define ANGLE_THRESH 	0.01
+#define ZERO_THRESH 	0.001
 
-// Gains (to be tuned)
+// Gains
 #define ka 				4.0		// responsiveness to distance from path 
 #define kb 				3.0		// responsiveness to angular deviation
 #define kb_point 		1.0 	// proportional gain for on-point-rotation
@@ -21,7 +19,8 @@
 #define YAW_TOLERANCE 	0.05	// completion check for on-point-rotation
 #define TURN_RATE_MIN	0.5		// minimum turn rate for on-point-rotation
 
-#define frequency 		20.0	// controller frequency (keep close to odometry rate)
+#define CONTROL_DELAY	0.3		// approx. low-level controller delay
+#define FREQUENCY 		20.0	// controller frequency (keep close to odometry rate)
 
 class UnicycleControl{
 	public:
@@ -123,9 +122,11 @@ class UnicycleControl{
 
 			v_x = odom->twist.twist.linear.x;
 			v_y = odom->twist.twist.linear.y; 		// typically, this should be zero
+			omega = odom->twist.twist.angular.z;
 			v 	= std::sqrt(v_x*v_x + v_y*v_y);
 
-			switchPathPiece();			
+			predictOdom();
+			switchPathPiece();
 			generateControl();
 
 			// Publishing twist
@@ -177,7 +178,7 @@ class UnicycleControl{
 		geometry_msgs::PoseStamped odom_pose, other_frame_pose;
 		double x = 0.0, y = 0.0;
 		double roll = 0.0, pitch = 0.0, yaw = 0.0;	// roll and pitch are dummy vars
-		double v_x = 0.0, v_y = 0.0, v = 0.0;
+		double v_x = 0.0, v_y = 0.0, v = 0.0, omega;
 
 		// Vars representing current path-piece to be followed
 		nav_msgs::Path path;
@@ -196,6 +197,26 @@ class UnicycleControl{
 		// Temp vars
 		tf::Quaternion q_temp;
 		tf::Matrix3x3 m_temp;
+
+		// Compensates for low-level controller delay by predicting an equally future-dated state
+		void predictOdom(){
+			if (CONTROL_DELAY > ZERO_THRESH)
+			{
+				if (std::abs(omega) > ZERO_THRESH)
+				{
+					x += (v/omega)*
+						(std::sin(yaw+omega*CONTROL_DELAY) - std::sin(yaw));
+					y += -(v/omega)*
+						(std::cos(yaw+omega*CONTROL_DELAY) - std::sin(yaw));
+				}
+				else
+				{
+					x += v*std::cos(yaw)*CONTROL_DELAY;
+					y += v*std::sin(yaw)*CONTROL_DELAY;
+				}
+				yaw += omega*CONTROL_DELAY;
+			}
+		}
 
 		// Switches to next path-piece if required & calculates some path parameters
 		// (some parameters are set to safe values even if not required by control)
@@ -234,8 +255,8 @@ class UnicycleControl{
 					m_temp.getRPY(roll, pitch, yaw_next);
 
 					// Identifying path_type and setting up necessary parameters
-					if (distance(x_prev, y_prev, x_next, y_next) > DIST_THRESH){
-						if (std::abs(angWrap(yaw_next-yaw_prev)) > ANGLE_THRESH){
+					if (distance(x_prev, y_prev, x_next, y_next) > ZERO_THRESH){
+						if (std::abs(angWrap(yaw_next-yaw_prev)) > ZERO_THRESH){
 							path_type = 'a';	// finite arc with non-zero radius
 							ROS_INFO_STREAM("Mode: Arc");
 							//////////////////////////////////////////////////////
@@ -370,7 +391,7 @@ int main(int argc,char* argv[]){
 	ros::NodeHandle nh;
 	UnicycleControl controller(&nh);
 	
-	ros::Rate loop_rate(frequency);
+	ros::Rate loop_rate(FREQUENCY);
 	while(ros::ok())
 	{
 		ros::spinOnce();
