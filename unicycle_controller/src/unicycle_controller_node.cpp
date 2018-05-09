@@ -223,7 +223,7 @@ class UnicycleControl{
 					x += (v/omega)*
 						(std::sin(yaw+omega*CONTROL_DELAY) - std::sin(yaw));
 					y += -(v/omega)*
-						(std::cos(yaw+omega*CONTROL_DELAY) - std::sin(yaw));
+						(std::cos(yaw+omega*CONTROL_DELAY) - std::cos(yaw));
 				}
 				else
 				{
@@ -340,9 +340,13 @@ class UnicycleControl{
 					path.poses[path_iterator+1].pose.position.y) < ZERO_THRESH) &&
 				((x-x_prev)*(x_next-x_prev)+(y-y_prev)*(y_next-y_prev))/
 				length_path > length_path - deceleration_distance)
-					upcoming_point = true;
+			{
+				if (!upcoming_point)
+					ROS_INFO_STREAM("Decelerating...");
+				upcoming_point = true;
+			}
 			else
-					upcoming_point = false;
+				upcoming_point = false;
 		}
 
 		// Generates control input for low level controller based on the path type
