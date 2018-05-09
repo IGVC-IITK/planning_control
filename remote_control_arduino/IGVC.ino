@@ -4,7 +4,7 @@
 
 // IMPORTANT: ROS nodehandle DOES NOT work when Uncommented
 // Use only while debugging to see values on all the channels
-#define SERIAL_DEBUG
+// #define SERIAL_DEBUG
 
 // These are the pins to which the respective channels etc are connected
 #define CH6 6
