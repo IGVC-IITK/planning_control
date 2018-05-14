@@ -171,7 +171,7 @@ void channel_to_ros(){
 
   /* Autonomous or manual mode */
   static bool prev_manual_mode = false;
-  bool manual_mode = true;
+  bool manual_mode = false;
   if(ch5 > 1550)
     manual_mode = true;
   else if (ch5 < 1450)
