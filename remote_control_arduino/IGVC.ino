@@ -4,7 +4,7 @@
 
 // IMPORTANT: ROS nodehandle DOES NOT work when Uncommented
 // Use only while debugging to see values on all the channels
-// #define SERIAL_DEBUG
+//#define SERIAL_DEBUG
 
 // These are the pins to which the respective channels etc are connected
 #define CH6 6
@@ -128,7 +128,7 @@ void channel_to_ros(){
   ch3 = ch3 > 2000 ? 2000 : ch3;
   ch3 = ch3 < 1000 ? 1000 : ch3;
   float max_vel = ((ch3 - 1000)/1000.0) * 2.0;
-  float max_ang = ((ch3 - 1000)/1000.0) * 1.0;
+  float max_ang = ((ch3 - 1000)/1000.0) * 4.0;
 
   /* Decoding forward/backward movement */
   // Limiting the range from 1000 to 2000
@@ -187,21 +187,25 @@ void channel_to_ros(){
     bool estop = false;
     digitalWrite(ESTOP, LOW);
   }
-  // Autonomous Mode then blink else constant
+  // Autonomous Mode then blink else constant. If Estop then dark/off 
   static bool state = LOW;
   static long prev_millis = 0;
-  if(!manual_mode){
-    if(millis() - prev_millis > 500){
+  if(!estop){
+    if(!manual_mode){
+      if(millis() - prev_millis > 500){
+        prev_millis = millis();
+        state = !state;
+        digitalWrite(STATUS_LED, state);
+      }
+    }
+    else{
       prev_millis = millis();
-      state = !state;
-      digitalWrite(13, state);
+      digitalWrite(STATUS_LED, HIGH);
     }
   }
   else{
-    prev_millis = millis();
-    digitalWrite(13, HIGH);
+    digitalWrite(STATUS_LED, LOW);
   }
-  
   // Get the values into ROS messages.
   cmd_vel.linear.x = v_linear_x;
   cmd_vel.angular.z = v_angle_z;
