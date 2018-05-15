@@ -178,13 +178,14 @@ void channel_to_ros(){
     manual_mode = false;
   
   /* E STOP */
+  bool estop;
   if(ch6 > 1550){
-    bool estop = true;
+    estop = true;
     digitalWrite(ESTOP, HIGH);
     Serial.println("Stop");
   }
   else if (ch6 < 1450){
-    bool estop = false;
+    estop = false;
     digitalWrite(ESTOP, LOW);
   }
   // Autonomous Mode then blink else constant. If Estop then dark/off 
