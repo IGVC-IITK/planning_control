@@ -1,0 +1,6 @@
+{
+    "terminal.integrated.env.linux": {
+        "PATH": "/home/blmhemu/.platformio/penv/bin:/home/blmhemu/.platformio/penv:/home/blmhemu/IGVC/iop_ws/devel/bin:/opt/ros/melodic/bin:/usr/local/cuda-10.0/bin:/usr/local/cuda-10.0/NsightCompute-1.0:/home/blmhemu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",
+        "PLATFORMIO_CALLER": "vscode"
+    }
+}
